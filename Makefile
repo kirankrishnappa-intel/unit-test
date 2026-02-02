@@ -1,27 +1,16 @@
-# Unit Test Framework - Makefile with Kconfig & Multiple Driver Support
-# Supports: PCIe Test Driver, Intel Bluetooth Test Generic Driver
+# Unit Test Framework - Makefile for Intel Bluetooth Test Generic Driver
+# Supports: Intel Bluetooth Test Generic Driver
 
 # Kernel build directory
 KDIR ?= /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 
-# Module name - can be overridden with BUILD_DRIVER=btintel
-BUILD_DRIVER ?= pcie
-ifeq ($(BUILD_DRIVER),btintel)
-  MODULE_NAME := btintel_test_generic_driver
-  obj-m := btintel_test_generic_driver.o
-else
-  MODULE_NAME := pcie_test_driver
-  obj-m := pcie_test_driver.o
-endif
+# Module name
+MODULE_NAME := btintel_test_generic_driver
+obj-m := btintel_test_generic_driver.o
 
 # Compiler flags
 ccflags-y := -std=gnu99 -Wall -Wextra -O2
-
-# Add debug flags if enabled
-ifeq ($(CONFIG_PCIE_TEST_DRIVER_DEBUG),y)
-ccflags-y += -DDEBUG -g
-endif
 
 # Default target
 all: modules
@@ -62,19 +51,11 @@ info:
 	@echo "Module: $(MODULE_NAME)"
 	@echo "Kernel: $(shell uname -r)"
 	@echo "Build dir: $(KDIR)"
-	@echo "Module path: /lib/modules/$(shell uname -r)/kernel/drivers/misc/"
-	@echo ""
-	@echo "Kconfig Settings:"
-	@echo "CONFIG_PCIE_TEST_DRIVER=$(CONFIG_PCIE_TEST_DRIVER)"
-	@echo "CONFIG_PCIE_TEST_DRIVER_DEBUG=$(CONFIG_PCIE_TEST_DRIVER_DEBUG)"
-	@echo "CONFIG_BUILD_PCIE_TEST_UTILITY=$(CONFIG_BUILD_PCIE_TEST_UTILITY)"
-	@echo "CONFIG_BUILD_PCIE_TEST_SCRIPTS=$(CONFIG_BUILD_PCIE_TEST_SCRIPTS)"
 
 # Help
 help:
-	@echo "Unit Test Framework - Make targets:"
+	@echo "Intel Bluetooth Test Generic Driver - Make targets:"
 	@echo ""
-	@echo "PCIe Test Driver (default):"
 	@echo "  all      - Build the kernel module (default)"
 	@echo "  modules  - Build the kernel module"
 	@echo "  clean    - Remove build artifacts"
@@ -84,13 +65,6 @@ help:
 	@echo "  unload   - Unload the module"
 	@echo "  reload   - Unload and load the module"
 	@echo "  info     - Show module information"
-	@echo ""
-	@echo "Intel Bluetooth Test Generic Driver:"
-	@echo "  make -f Makefile.btintel_test modules  - Build btintel test driver"
-	@echo "  make -f Makefile.btintel_test load     - Load btintel test driver"
-	@echo "  make -f Makefile.btintel_test unload   - Unload btintel test driver"
-	@echo "  make -f Makefile.btintel_test status   - Show module status"
-	@echo ""
 	@echo "  help     - Show this help message"
 
 .PHONY: all modules clean install uninstall load unload reload info help
