@@ -33,7 +33,10 @@
 #include <linux/spinlock.h>
 #include <linux/mutex.h>
 #include <linux/uaccess.h>
+#include <linux/pci.h>
 
+#include <net/bluetooth/bluetooth.h>
+#include <net/bluetooth/hci.h>
 #include "btintel_test_generic_driver.h"
 
 /* ============================================================================
@@ -56,6 +59,20 @@ MODULE_DESCRIPTION(DRIVER_DESC);
 
 /* Number of devices supported */
 #define DEVICE_COUNT			1
+
+/* Intel Bluetooth PCIe device IDs */
+#define INTEL_VENDOR_ID			PCI_VENDOR_ID_INTEL  /* 0x8086 */
+static const u16 intel_bt_device_ids[] = {
+	0xA876, /* Arrow Lake */
+	0xE476, /* PTL FmP2 */
+	0xE376, /* PTL-H FmP2 C0 */
+	0xD346, /* NVL PCD-H (ScP2) */
+	0x6E74, /* NVL PCD-S (ScP2) */
+	0x4D76, /* WCL */
+	0x2732, /* PCP 2 */
+	0x2731, /* BZP */
+	0      /* Terminator */
+};
 
 /* Debug logging macro */
 #ifdef DEBUG
@@ -524,6 +541,34 @@ err_class_create:
 }
 
 /**
+ * find_intel_bt_devices - Find and extract Intel Bluetooth PCIe devices
+ *
+ * Return: Number of Intel Bluetooth devices found
+ */
+static int find_intel_bt_devices(void)
+{
+	int count = 0;
+	struct pci_dev *pdev = NULL;
+
+	/* Iterate through PCI devices and check for Intel Bluetooth */
+	while ((pdev = pci_get_device(INTEL_VENDOR_ID, PCI_ANY_ID, pdev)) != NULL) {
+		/* Check if it's in our Intel Bluetooth device list */
+		int i = 0;
+		while (intel_bt_device_ids[i]) {
+			if (pdev->device == intel_bt_device_ids[i]) {
+				pr_info("Found Intel Bluetooth PCIe device: %s\n", pci_name(pdev));
+				pr_info("  Vendor: 0x%04x, Device: 0x%04x\n", pdev->vendor, pdev->device);
+				count++;
+				break;
+			}
+			i++;
+		}
+	}
+
+	return count;
+}
+
+/**
  * btintel_test_chrdev_unregister - Unregister character device
  */
 static void btintel_test_chrdev_unregister(void)
@@ -556,6 +601,14 @@ static int __init btintel_test_init(void)
 	int ret = 0;
 
 	pr_info("Loading %s driver version %s\n", DRIVER_NAME, DRIVER_VERSION);
+
+	/* Search for Intel Bluetooth devices */
+	int intel_bt_count = find_intel_bt_devices();
+	if (intel_bt_count > 0) {
+		pr_info("Found %d Intel Bluetooth PCIe device(s)\n", intel_bt_count);
+	} else {
+		pr_warn("No Intel Bluetooth devices found\n");
+	}
 
 	/* Initialize device */
 	ret = btintel_test_device_init();
