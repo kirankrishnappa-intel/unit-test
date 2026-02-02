@@ -1,0 +1,217 @@
+================================================================================
+  KERNEL MODULE BUILD & SIGNING STATUS REPORT
+  Date: 2026-02-02
+================================================================================
+
+PROJECT: Linux IOSF Unit Test Framework
+LOCATION: /home/kirank1/code/git/linux_iosf_test/unit-test
+
+================================================================================
+1. COMPILATION STATUS ✓ SUCCESS
+================================================================================
+
+Both kernel modules compiled successfully without errors:
+
+  Module 1: pcie_test_driver.ko
+    - Size: 378 KB
+    - Type: PCIe Device Test Framework
+    - Status: ✓ Compiled
+    - Build Time: 2026-02-02 15:07
+
+  Module 2: btintel_test_generic_driver.ko
+    - Size: 359 KB
+    - Type: Intel Bluetooth Test Driver
+    - Status: ✓ Compiled
+    - Build Time: 2026-02-02 15:07
+
+Compilation Output:
+  - No compilation errors
+  - Warnings: Non-critical (unused functions reserved for future use)
+  - Verification Magic: 6.8.0-53-generic SMP preempt mod_unload modversions
+
+================================================================================
+2. MODULE SIGNING STATUS ✓ SIGNED
+================================================================================
+
+Both modules have been digitally signed with MOK (Machine Owner Key):
+
+  Signing Method: sha512
+  Key Type: Self-generated RSA 2048-bit
+  Certificate: unit-test-signing
+  Enrollment Status: PENDING (awaiting UEFI confirmation)
+
+Module Signature Details:
+  - pcie_test_driver.ko: ✓ Signed with mok.key
+  - btintel_test_generic_driver.ko: ✓ Signed with mok.key
+
+================================================================================
+3. SECURE BOOT STATUS
+================================================================================
+
+System Configuration:
+  - Secure Boot: ENABLED
+  - Module Signing Requirement: ENFORCED
+  - Kernel Config: CONFIG_MODULE_SIG=y, CONFIG_MODULE_SIG_ALL=y
+  - Signing Algorithm: SHA512
+
+Current Issue:
+  - Modules cannot load because MOK certificate is not yet enrolled in UEFI firmware
+  - Error: "Key was rejected by service"
+
+Pending MOK Request:
+  ✓ MOK certificate 'unit-test-signing' is in enrollment queue
+  ✓ Certificate fingerprint registered with mokutil
+  ✓ Awaiting UEFI firmware confirmation at next boot
+
+================================================================================
+4. CURRENT MODULE STATUS
+================================================================================
+
+Load Status: ✗ NOT LOADED (waiting for MOK enrollment)
+
+Verification Output:
+  pcie_test_driver.ko:
+    - filename: /home/kirank1/code/git/linux_iosf_test/unit-test/pcie_test_driver.ko
+    - version: 1.0
+    - license: GPL
+    - description: Linux PCIe Test Driver Framework
+    - vermagic: 6.8.0-53-generic SMP preempt mod_unload modversions
+    - status: Ready for loading (awaiting MOK enrollment)
+
+  btintel_test_generic_driver.ko:
+    - filename: /home/kirank1/code/git/linux_iosf_test/unit-test/btintel_test_generic_driver.ko
+    - version: 1.0
+    - license: GPL
+    - status: Ready for loading (awaiting MOK enrollment)
+
+================================================================================
+5. NEXT STEPS - TO LOAD MODULES
+================================================================================
+
+OPTION A: Complete MOK Enrollment (Recommended)
+---
+1. Reboot the system:
+   $ sudo reboot
+
+2. During boot, you will see the MOK Manager (UEFI interface)
+   - Look for: "Press [Enter] to continue boot, or any other key to enter MOK menu"
+   - Press any key to enter MOK menu
+   - Select "Enroll MOK"
+   - Confirm the "unit-test-signing" certificate
+   - When prompted for password: press Enter twice (empty password)
+   - Follow prompts to complete enrollment
+   - System will reboot automatically
+
+3. After reboot, load modules:
+   $ cd /home/kirank1/code/git/linux_iosf_test/unit-test
+   $ sudo insmod pcie_test_driver.ko
+   $ sudo insmod btintel_test_generic_driver.ko
+
+4. Verify modules are loaded:
+   $ lsmod | grep -E "pcie_test|btintel_test"
+   $ dmesg | tail -20
+
+
+OPTION B: Disable Secure Boot (if permitted)
+---
+1. Reboot into BIOS/UEFI settings
+2. Disable "Secure Boot"
+3. Save and reboot
+4. Load modules directly without signing:
+   $ sudo insmod pcie_test_driver.ko
+   $ sudo insmod btintel_test_generic_driver.ko
+
+================================================================================
+6. VERIFICATION COMMANDS
+================================================================================
+
+Check module information:
+  $ modinfo pcie_test_driver.ko
+  $ modinfo btintel_test_generic_driver.ko
+
+Check pending MOK requests:
+  $ sudo mokutil --list-new
+
+Check enrolled MOK keys:
+  $ sudo mokutil --list-enrolled
+
+After loading, check device files:
+  $ ls -la /dev/pcie_test_driver*
+  $ ls -la /dev/btintel_test_generic_driver*
+
+Check kernel messages:
+  $ dmesg | tail -20
+  $ sudo journalctl -e
+
+Unload modules:
+  $ sudo rmmod pcie_test_driver
+  $ sudo rmmod btintel_test_generic_driver
+
+================================================================================
+7. FILE LOCATIONS
+================================================================================
+
+Kernel Modules:
+  - /home/kirank1/code/git/linux_iosf_test/unit-test/pcie_test_driver.ko
+  - /home/kirank1/code/git/linux_iosf_test/unit-test/btintel_test_generic_driver.ko
+
+MOK Keys:
+  - Public Certificate: mok.der
+  - Private Key: mok.key (kept in .gitignore for security)
+
+Documentation:
+  - MODULE_LOADING_GUIDE.md - Detailed loading instructions
+  - BLUETOOTH_TEST_STRATEGY.md - Intel Bluetooth driver architecture
+  - CUSTOMIZATION.md - Device configuration guide
+  - README.md - General framework information
+
+Source Code:
+  - pcie_test_driver.c/h - PCIe driver implementation
+  - btintel_test_generic_driver.c/h - Bluetooth test driver
+
+Build Configuration:
+  - Makefile - Main build system
+  - Kbuild - Kernel build integration
+  - .gitignore - Excludes build artifacts and private keys
+
+================================================================================
+8. BUILD ARTIFACTS IN GIT
+================================================================================
+
+Tracked Files:
+  ✓ Source code (*.c, *.h)
+  ✓ Build configuration (Makefile, Kbuild)
+  ✓ Documentation (*.md)
+  ✓ MOK certificate (mok.der)
+  ✓ .gitignore configuration
+
+Excluded from Git:
+  ✗ Compiled modules (*.ko)
+  ✗ Build artifacts (*.o, *.mod, .*.cmd)
+  ✗ Private keys (*.key)
+  ✗ Temporary files (Module.symvers, modules.order)
+
+Git Commits:
+  1. Add Intel Bluetooth test generic driver and build system updates
+  2. Fix module compilation - both drivers now building successfully
+  3. Sign modules and add loading guide for Secure Boot systems
+  4. Update .gitignore to exclude MOK private keys
+
+================================================================================
+9. SUMMARY
+================================================================================
+
+✓ COMPILATION: Both modules compiled successfully
+✓ SIGNING: Both modules signed with self-generated MOK certificate
+✗ LOADING: Modules ready but require MOK enrollment via UEFI
+
+ACTION REQUIRED:
+  → Reboot system to complete MOK enrollment
+  → Follow UEFI MOK Manager prompts to enroll "unit-test-signing" certificate
+  → After reboot, modules will load successfully
+
+ESTIMATED TIME TO COMPLETE: 5 minutes (one reboot cycle)
+
+For detailed instructions, see: MODULE_LOADING_GUIDE.md
+
+================================================================================
