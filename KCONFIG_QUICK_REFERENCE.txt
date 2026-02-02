@@ -1,0 +1,114 @@
+# PCIe Test Driver - Kconfig Quick Reference
+
+## Quick Start
+
+### Enable Framework via Menuconfig
+
+```bash
+cd /home/kirank1/code/git/linux_iosf_test
+make menuconfig
+```
+
+Then navigate to: **"Unit Test Framework"**
+
+### Configuration Options
+
+| Option | Type | Default | Depends On |
+|--------|------|---------|-----------|
+| PCIe Test Driver Framework | bool | n | - |
+| Enable debug output | bool | n | PCIE_TEST_DRIVER |
+| Build PCIe Test Utility | bool | y | PCIE_TEST_DRIVER |
+| Build PCIe Test Scripts | bool | y | PCIE_TEST_DRIVER |
+
+### Menu Navigation
+
+```
+Unit Test Framework
+├─ [*] PCIe Test Driver Framework
+├─ [ ] Enable debug output in PCIe Test Driver
+├─ [*] Build PCIe Test Utility
+└─ [*] Build PCIe Test Scripts
+```
+
+## Common Tasks
+
+### Enable Everything (Development)
+```bash
+make menuconfig
+# In menu: Select all options
+# Press Space to toggle [*]
+# Select "Save"
+make
+```
+
+### Disable Framework
+```bash
+make menuconfig
+# In menu: Uncheck PCIe Test Driver Framework
+# Select "Save"
+make
+```
+
+### Enable Debug Mode
+```bash
+make menuconfig
+# Check: PCIe Test Driver Framework
+# Check: Enable debug output in PCIe Test Driver
+# Select "Save"
+cd unit-test
+make modules
+sudo insmod pcie_test_driver.ko debug_level=2
+dmesg | grep pcie_test_driver
+```
+
+### Module Only (No Utilities)
+```bash
+make menuconfig
+# Check: PCIe Test Driver Framework
+# Uncheck: Build PCIe Test Utility
+# Uncheck: Build PCIe Test Scripts
+# Select "Save"
+make
+```
+
+## Verify Configuration
+
+```bash
+# After saving in menuconfig:
+grep CONFIG_PCIE_TEST_DRIVER .config
+
+# Should show:
+CONFIG_PCIE_TEST_DRIVER=y
+CONFIG_PCIE_TEST_DRIVER_DEBUG=y (or n)
+CONFIG_BUILD_PCIE_TEST_UTILITY=y (or n)
+CONFIG_BUILD_PCIE_TEST_SCRIPTS=y (or n)
+```
+
+## Build Status
+
+```bash
+cd unit-test
+make info
+# Shows current Kconfig settings
+```
+
+## Files Modified
+
+1. **Kconfig** - Added source for unit-test/Kconfig
+2. **unit-test/Kconfig** - New configuration file
+3. **unit-test/Makefile** - Updated to respect CONFIG_PCIE_TEST_DRIVER
+
+## How It Works
+
+- **Menuconfig** reads Kconfig files
+- **Makefile** checks CONFIG_* variables during build
+- **obj-m** is only set if CONFIG_PCIE_TEST_DRIVER is enabled
+- **Compiler flags** are conditionally applied based on DEBUG setting
+
+## Reference
+
+Full details in: [KCONFIG_GUIDE.md](KCONFIG_GUIDE.md)
+
+---
+
+**Quick Help:** `make menuconfig` → Navigate to "Unit Test Framework" → Enable/Disable as needed → Save

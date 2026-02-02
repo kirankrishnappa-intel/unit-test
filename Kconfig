@@ -1,0 +1,59 @@
+menu "Unit Test Framework"
+
+config PCIE_TEST_DRIVER
+	bool "PCIe Test Driver Framework"
+	default n
+	help
+	  PCIe Test Driver Framework is a comprehensive Linux kernel module
+	  and user-space utilities for testing PCIe devices.
+	  
+	  The framework provides tools for:
+	  - BAR (Base Address Register) access
+	  - Configuration space operations
+	  - Interrupt handling
+	  - DMA operations
+	  - Device enumeration and testing
+	  
+	  This framework is useful for PCIe hardware testing, validation,
+	  and development. Enable this to build the test driver module and
+	  associated utilities.
+	  
+	  If unsure, say N.
+
+config PCIE_TEST_DRIVER_DEBUG
+	bool "Enable debug output in PCIe Test Driver"
+	depends on PCIE_TEST_DRIVER
+	default n
+	help
+	  Enable verbose debug logging in the PCIe test driver module.
+	  This will output detailed information about device operations,
+	  BAR accesses, and interrupts to the kernel log (dmesg).
+	  
+	  If unsure, say N.
+
+config BUILD_PCIE_TEST_UTILITY
+	bool "Build PCIe Test Utility"
+	depends on PCIE_TEST_DRIVER
+	default y
+	help
+	  Build the user-space command-line utility for testing PCIe devices.
+	  This utility provides an interface to interact with the kernel module
+	  without writing custom applications.
+	  
+	  If unsure, say Y.
+
+config BUILD_PCIE_TEST_SCRIPTS
+	bool "Build PCIe Test Scripts"
+	depends on PCIE_TEST_DRIVER
+	default y
+	help
+	  Build automated test scripts for validating the PCIe test driver
+	  framework. These scripts provide:
+	  - Automated module build and loading
+	  - Basic functionality tests
+	  - Status checking and reporting
+	  - Checkpoint tracking and reporting
+	  
+	  If unsure, say Y.
+
+endmenu
