@@ -11,6 +11,7 @@ obj-m := btintel_test_generic_driver.o
 
 # Compiler flags
 ccflags-y := -std=gnu99 -Wall -Wextra -O2
+ccflags-y += -I$(PWD)/../drivers/bluetooth
 
 # Default target
 all: modules

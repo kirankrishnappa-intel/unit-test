@@ -15,6 +15,10 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
+#include <linux/skbuff.h>
+#include <linux/io.h>
+#include <linux/pci.h>
+#include "../drivers/bluetooth/btintel_pcie.h"
 
 /* ============================================================================
  * CONSTANTS
