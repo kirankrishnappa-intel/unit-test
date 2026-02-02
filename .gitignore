@@ -1,0 +1,23 @@
+# Build artifacts
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.o
+.*.cmd
+Module.symvers
+modules.order
+.tmp_versions/
+
+# Binaries
+pcie_test_utility
+
+# Editor/IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

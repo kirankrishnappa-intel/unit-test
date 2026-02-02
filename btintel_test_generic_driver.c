@@ -19,6 +19,8 @@
  * INCLUDES
  * ============================================================================ */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -43,17 +45,14 @@
 #define DRIVER_AUTHOR			"Your Name <your.email@example.com>"
 #define DRIVER_VERSION			"1.0.0"
 
-MODULE_NAME(DRIVER_NAME);
-MODULE_DESCRIPTION(DRIVER_DESC);
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_VERSION(DRIVER_VERSION);
-MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(DRIVER_DESC);
 
 /* ============================================================================
  * CONSTANTS & MACROS
  * ============================================================================ */
-
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 /* Number of devices supported */
 #define DEVICE_COUNT			1

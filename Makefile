@@ -5,20 +5,13 @@
 KDIR ?= /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 
-# Module name
-MODULE_NAME := pcie_test_driver
-
-# Build based on Kconfig settings or use default
-ifdef CONFIG_PCIE_TEST_DRIVER
-  ifeq ($(CONFIG_PCIE_TEST_DRIVER),y)
-  obj-m := pcie_test_driver.o
-  else ifeq ($(CONFIG_PCIE_TEST_DRIVER),m)
-  obj-m := pcie_test_driver.o
-  else
-  obj-m :=
-  endif
+# Module name - can be overridden with BUILD_DRIVER=btintel
+BUILD_DRIVER ?= pcie
+ifeq ($(BUILD_DRIVER),btintel)
+  MODULE_NAME := btintel_test_generic_driver
+  obj-m := btintel_test_generic_driver.o
 else
-  # Default: always build pcie_test_driver
+  MODULE_NAME := pcie_test_driver
   obj-m := pcie_test_driver.o
 endif
 
