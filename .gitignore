@@ -9,6 +9,10 @@ Module.symvers
 modules.order
 .tmp_versions/
 
+# MOK signing keys (keep private key secure)
+mok.key
+*.key
+
 # Binaries
 pcie_test_utility
 
