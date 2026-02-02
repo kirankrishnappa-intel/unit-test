@@ -1,4 +1,5 @@
-# PCIe Test Driver - Makefile with Kconfig Support
+# Unit Test Framework - Makefile with Kconfig & Multiple Driver Support
+# Supports: PCIe Test Driver, Intel Bluetooth Test Generic Driver
 
 # Kernel build directory
 KDIR ?= /lib/modules/$(shell uname -r)/build
@@ -7,13 +8,18 @@ PWD := $(shell pwd)
 # Module name
 MODULE_NAME := pcie_test_driver
 
-# Build based on Kconfig settings
-ifeq ($(CONFIG_PCIE_TEST_DRIVER),y)
-obj-m := pcie_test_driver.o
-else ifeq ($(CONFIG_PCIE_TEST_DRIVER),m)
-obj-m := pcie_test_driver.o
+# Build based on Kconfig settings or use default
+ifdef CONFIG_PCIE_TEST_DRIVER
+  ifeq ($(CONFIG_PCIE_TEST_DRIVER),y)
+  obj-m := pcie_test_driver.o
+  else ifeq ($(CONFIG_PCIE_TEST_DRIVER),m)
+  obj-m := pcie_test_driver.o
+  else
+  obj-m :=
+  endif
 else
-obj-m :=
+  # Default: always build pcie_test_driver
+  obj-m := pcie_test_driver.o
 endif
 
 # Compiler flags
@@ -73,7 +79,9 @@ info:
 
 # Help
 help:
-	@echo "PCIe Test Driver - Make targets:"
+	@echo "Unit Test Framework - Make targets:"
+	@echo ""
+	@echo "PCIe Test Driver (default):"
 	@echo "  all      - Build the kernel module (default)"
 	@echo "  modules  - Build the kernel module"
 	@echo "  clean    - Remove build artifacts"
@@ -83,6 +91,13 @@ help:
 	@echo "  unload   - Unload the module"
 	@echo "  reload   - Unload and load the module"
 	@echo "  info     - Show module information"
+	@echo ""
+	@echo "Intel Bluetooth Test Generic Driver:"
+	@echo "  make -f Makefile.btintel_test modules  - Build btintel test driver"
+	@echo "  make -f Makefile.btintel_test load     - Load btintel test driver"
+	@echo "  make -f Makefile.btintel_test unload   - Unload btintel test driver"
+	@echo "  make -f Makefile.btintel_test status   - Show module status"
+	@echo ""
 	@echo "  help     - Show this help message"
 
 .PHONY: all modules clean install uninstall load unload reload info help
