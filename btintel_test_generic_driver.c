@@ -37,6 +37,8 @@
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci.h>
+#include <net/bluetooth/hci_sync.h>
+//#include "../../drivers/bluetooth/btintel_pcie.h"
 #include "btintel_test_generic_driver.h"
 
 /* ============================================================================
@@ -512,6 +514,19 @@ static void btintel_test_misc_unregister(void)
 	}
 }
 
+void test_function(void)
+{
+	struct hci_dev *hdev;
+	struct pci_dev *pdev = btintel_test_dev->pdev;
+	struct btintel_pcie_data *btintel_data;
+	u8 param[] = {0xff};
+
+	btintel_data = pci_get_drvdata(pdev);
+	hdev = btintel_data->hdev;
+	hci_cmd_sync(hdev, 0xfc05, 1, param, HCI_CMD_TIMEOUT); /* Example HCI command */
+
+}
+
 /* ============================================================================
  * MODULE INIT & EXIT
  * ============================================================================ */
@@ -546,6 +561,7 @@ static int __init btintel_test_init(void)
 	btintel_test_dev->pdev = pdev;
 	pr_info("Stored PCI device reference: %s\n", pci_name(pdev));
 
+	test_function();
 	/* Register miscdevice */
 	ret = btintel_test_misc_register();
 	if (ret) {
