@@ -89,7 +89,7 @@ static const u16 intel_bt_device_ids[] = {
 /**
  * struct btintel_test_device - Main device structure
  * @misc: Miscdevice structure
- * @lock: Mutex for device state protection
+ * @pdev: PCIe device pointer
  * @refcount: Open file descriptor reference count
  * @active: Device state (active/inactive)
  * @buffer: Internal device buffer (example)
@@ -98,7 +98,7 @@ static const u16 intel_bt_device_ids[] = {
  */
 struct btintel_test_device {
 	struct miscdevice misc;
-	struct mutex lock;
+	struct pci_dev *pdev;
 	int refcount;
 	bool active;
 	void *buffer;
@@ -161,18 +161,13 @@ static int btintel_test_open(struct inode *inode, struct file *filp)
 	if (!dev)
 		return -ENODEV;
 
-	mutex_lock(&dev->lock);
-
 	if (!dev->active) {
 		pr_warn("Device not active\n");
-		mutex_unlock(&dev->lock);
 		return -ENODEV;
 	}
 
 	dev->refcount++;
 	filp->private_data = dev;
-
-	mutex_unlock(&dev->lock);
 
 	return 0;
 }
@@ -190,10 +185,8 @@ static int btintel_test_release(struct inode *inode, struct file *filp)
 
 	pr_debug_dev("Device released\n");
 
-	mutex_lock(&dev->lock);
-	if (dev->refcount > 0)
+	if (dev && dev->refcount > 0)
 		dev->refcount--;
-	mutex_unlock(&dev->lock);
 
 	return 0;
 }
@@ -216,30 +209,22 @@ static ssize_t btintel_test_read(struct file *filp, char __user *buf,
 	if (!dev || !dev->buffer)
 		return -ENODEV;
 
-	mutex_lock(&dev->lock);
-
-	if (*f_pos >= dev->buffer_size) {
-		ret = 0;
-		goto out;
-	}
+	if (*f_pos >= dev->buffer_size)
+		return 0;
 
 	count = min(count, dev->buffer_size - (size_t)*f_pos);
 
 	if (copy_to_user(buf, dev->buffer + *f_pos, count)) {
-		ret = -EFAULT;
 		dev->stats.errors++;
-		goto out;
+		return -EFAULT;
 	}
 
 	*f_pos += count;
-	ret = count;
 	dev->stats.read_count++;
 
 	pr_debug_dev("Read %zd bytes\n", count);
 
-out:
-	mutex_unlock(&dev->lock);
-	return ret;
+	return count;
 }
 
 /**
@@ -260,20 +245,16 @@ static ssize_t btintel_test_write(struct file *filp, const char __user *buf,
 	if (!dev || !dev->buffer)
 		return -ENODEV;
 
-	mutex_lock(&dev->lock);
-
 	if (*f_pos >= dev->buffer_size) {
-		ret = -ENOSPC;
 		dev->stats.errors++;
-		goto out;
+		return -ENOSPC;
 	}
 
 	count = min(count, dev->buffer_size - (size_t)*f_pos);
 
 	if (copy_from_user(dev->buffer + *f_pos, buf, count)) {
-		ret = -EFAULT;
 		dev->stats.errors++;
-		goto out;
+		return -EFAULT;
 	}
 
 	*f_pos += count;
@@ -282,8 +263,6 @@ static ssize_t btintel_test_write(struct file *filp, const char __user *buf,
 
 	pr_debug_dev("Wrote %zd bytes\n", count);
 
-out:
-	mutex_unlock(&dev->lock);
 	return ret;
 }
 
@@ -306,8 +285,6 @@ static long btintel_test_ioctl(struct file *filp, unsigned int cmd,
 
 	if (!dev)
 		return -ENODEV;
-
-	mutex_lock(&dev->lock);
 
 	switch (cmd) {
 	case BTINTEL_TEST_IOC_GET_INFO:
@@ -402,7 +379,6 @@ static long btintel_test_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 	dev->stats.ioctl_count++;
-	mutex_unlock(&dev->lock);
 
 	return ret;
 }
@@ -428,7 +404,6 @@ static int btintel_test_device_init(void)
 		return -ENOMEM;
 	}
 
-	mutex_init(&btintel_test_dev->lock);
 	btintel_test_dev->active = true;
 	btintel_test_dev->buffer_size = BTINTEL_TEST_DEFAULT_BUFFER_SIZE;
 
@@ -472,11 +447,11 @@ static void btintel_test_device_cleanup(void)
  * ============================================================================ */
 
 /**
- * btintel_test_chrdev_register - Register miscdevice
+ * btintel_test_misc_register - Register miscdevice
  *
  * Return: 0 on success, negative error code on failure
  */
-static int btintel_test_chrdev_register(void)
+static int btintel_test_misc_register(void)
 {
 	int ret = 0;
 
@@ -501,13 +476,12 @@ static int btintel_test_chrdev_register(void)
 }
 
 /**
- * find_intel_bt_devices - Find and extract Intel Bluetooth PCIe devices
+ * find_intel_bt_devices - Find Intel Bluetooth PCIe device
  *
- * Return: Number of Intel Bluetooth devices found
+ * Return: Pointer to pci_dev on success, NULL if not found
  */
-static int find_intel_bt_devices(void)
+static struct pci_dev *find_intel_bt_devices(void)
 {
-	int count = 0;
 	struct pci_dev *pdev = NULL;
 
 	/* Iterate through PCI devices and check for Intel Bluetooth */
@@ -518,20 +492,19 @@ static int find_intel_bt_devices(void)
 			if (pdev->device == intel_bt_device_ids[i]) {
 				pr_info("Found Intel Bluetooth PCIe device: %s\n", pci_name(pdev));
 				pr_info("  Vendor: 0x%04x, Device: 0x%04x\n", pdev->vendor, pdev->device);
-				count++;
-				break;
+				return pdev;  /* Return the device and stop searching */
 			}
 			i++;
 		}
 	}
 
-	return count;
+	return NULL;  /* No device found */
 }
 
 /**
- * btintel_test_chrdev_unregister - Unregister miscdevice
+ * btintel_test_misc_unregister - Unregister miscdevice
  */
-static void btintel_test_chrdev_unregister(void)
+static void btintel_test_misc_unregister(void)
 {
 	pr_info("Unregistering miscdevice\n");
 
@@ -556,12 +529,12 @@ static int __init btintel_test_init(void)
 	pr_info("Loading %s driver version %s\n", DRIVER_NAME, DRIVER_VERSION);
 
 	/* Search for Intel Bluetooth devices */
-	int intel_bt_count = find_intel_bt_devices();
-	if (intel_bt_count > 0) {
-		pr_info("Found %d Intel Bluetooth PCIe device(s)\n", intel_bt_count);
-	} else {
+	struct pci_dev *pdev = find_intel_bt_devices();
+	if (!pdev) {
 		pr_warn("No Intel Bluetooth devices found\n");
+		return -ENODEV;
 	}
+	pr_info("Found Intel Bluetooth PCIe device\n");
 
 	/* Initialize device */
 	ret = btintel_test_device_init();
@@ -570,10 +543,14 @@ static int __init btintel_test_init(void)
 		return ret;
 	}
 
-	/* Register character device */
-	ret = btintel_test_chrdev_register();
+	/* Store PCI device reference */
+	btintel_test_dev->pdev = pdev;
+	pr_info("Stored PCI device reference: %s\n", pci_name(pdev));
+
+	/* Register miscdevice */
+	ret = btintel_test_misc_register();
 	if (ret) {
-		pr_err("Failed to register character device\n");
+		pr_err("Failed to register miscdevice\n");
 		btintel_test_device_cleanup();
 		return ret;
 	}
@@ -589,7 +566,7 @@ static void __exit btintel_test_exit(void)
 {
 	pr_info("Unloading %s driver\n", DRIVER_NAME);
 
-	btintel_test_chrdev_unregister();
+	btintel_test_misc_unregister();
 	btintel_test_device_cleanup();
 
 	pr_info("Driver unloaded\n");
