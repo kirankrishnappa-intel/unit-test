@@ -26,7 +26,7 @@
 #include <linux/init.h>
 #include <linux/types.h>
 #include <linux/device.h>
-#include <linux/cdev.h>
+#include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/ioctl.h>
 #include <linux/slab.h>
@@ -88,9 +88,7 @@ static const u16 intel_bt_device_ids[] = {
 
 /**
  * struct btintel_test_device - Main device structure
- * @cdev: Character device structure
- * @dev: Device pointer
- * @devt: Device number (major + minor)
+ * @misc: Miscdevice structure
  * @lock: Mutex for device state protection
  * @refcount: Open file descriptor reference count
  * @active: Device state (active/inactive)
@@ -99,9 +97,7 @@ static const u16 intel_bt_device_ids[] = {
  * @stats: Device statistics
  */
 struct btintel_test_device {
-	struct cdev cdev;
-	struct device *dev;
-	dev_t devt;
+	struct miscdevice misc;
 	struct mutex lock;
 	int refcount;
 	bool active;
@@ -119,8 +115,6 @@ struct btintel_test_device {
  * GLOBAL VARIABLES
  * ============================================================================ */
 
-static struct class *btintel_test_class;
-static dev_t btintel_test_devt;
 static struct btintel_test_device *btintel_test_dev;
 
 /* ============================================================================
@@ -162,11 +156,10 @@ static const struct file_operations btintel_test_fops = {
  */
 static int btintel_test_open(struct inode *inode, struct file *filp)
 {
-	struct btintel_test_device *dev = container_of(inode->i_cdev,
-						   struct btintel_test_device,
-						   cdev);
+	struct btintel_test_device *dev = btintel_test_dev;
 
-	pr_debug_dev("Device opened\n");
+	if (!dev)
+		return -ENODEV;
 
 	mutex_lock(&dev->lock);
 
@@ -479,7 +472,7 @@ static void btintel_test_device_cleanup(void)
  * ============================================================================ */
 
 /**
- * btintel_test_chrdev_register - Register character device
+ * btintel_test_chrdev_register - Register miscdevice
  *
  * Return: 0 on success, negative error code on failure
  */
@@ -487,57 +480,24 @@ static int btintel_test_chrdev_register(void)
 {
 	int ret = 0;
 
-	pr_info("Registering character device\n");
+	pr_info("Registering miscdevice\n");
 
-	/* Allocate device numbers */
-	ret = alloc_chrdev_region(&btintel_test_devt, 0, DEVICE_COUNT, DRIVER_NAME);
+	/* Setup miscdevice structure */
+	btintel_test_dev->misc.minor = MISC_DYNAMIC_MINOR;
+	btintel_test_dev->misc.name = DRIVER_NAME;
+	btintel_test_dev->misc.fops = &btintel_test_fops;
+
+	/* Register miscdevice */
+	ret = misc_register(&btintel_test_dev->misc);
 	if (ret) {
-		pr_err("Failed to allocate device number\n");
+		pr_err("Failed to register miscdevice\n");
 		return ret;
 	}
 
-	pr_info("Allocated device number: %d:%d\n",
-		MAJOR(btintel_test_devt), MINOR(btintel_test_devt));
+	pr_info("Miscdevice registered: /dev/%s (minor: %d)\n",
+		DRIVER_NAME, btintel_test_dev->misc.minor);
 
-	/* Create device class */
-	btintel_test_class = class_create(DRIVER_NAME);
-	if (IS_ERR(btintel_test_class)) {
-		pr_err("Failed to create device class\n");
-		ret = PTR_ERR(btintel_test_class);
-		goto err_class_create;
-	}
-
-	/* Initialize character device */
-	cdev_init(&btintel_test_dev->cdev, &btintel_test_fops);
-	btintel_test_dev->cdev.owner = THIS_MODULE;
-
-	/* Add character device */
-	ret = cdev_add(&btintel_test_dev->cdev, btintel_test_devt, DEVICE_COUNT);
-	if (ret) {
-		pr_err("Failed to add character device\n");
-		goto err_cdev_add;
-	}
-
-	/* Create device file */
-	btintel_test_dev->dev = device_create(btintel_test_class, NULL, btintel_test_devt,
-					 NULL, DRIVER_NAME "0");
-	if (IS_ERR(btintel_test_dev->dev)) {
-		pr_err("Failed to create device file\n");
-		ret = PTR_ERR(btintel_test_dev->dev);
-		goto err_device_create;
-	}
-
-	pr_info("Device file created: /dev/%s0\n", DRIVER_NAME);
 	return 0;
-
-	/* Error handling */
-err_device_create:
-	cdev_del(&btintel_test_dev->cdev);
-err_cdev_add:
-	class_destroy(btintel_test_class);
-err_class_create:
-	unregister_chrdev_region(btintel_test_devt, DEVICE_COUNT);
-	return ret;
 }
 
 /**
@@ -569,22 +529,15 @@ static int find_intel_bt_devices(void)
 }
 
 /**
- * btintel_test_chrdev_unregister - Unregister character device
+ * btintel_test_chrdev_unregister - Unregister miscdevice
  */
 static void btintel_test_chrdev_unregister(void)
 {
-	pr_info("Unregistering character device\n");
+	pr_info("Unregistering miscdevice\n");
 
-	if (btintel_test_dev && btintel_test_dev->dev) {
-		device_destroy(btintel_test_class, btintel_test_devt);
-		cdev_del(&btintel_test_dev->cdev);
+	if (btintel_test_dev) {
+		misc_deregister(&btintel_test_dev->misc);
 	}
-
-	if (btintel_test_class) {
-		class_destroy(btintel_test_class);
-	}
-
-	unregister_chrdev_region(btintel_test_devt, DEVICE_COUNT);
 }
 
 /* ============================================================================
