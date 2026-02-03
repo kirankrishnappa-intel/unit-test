@@ -1,27 +1,73 @@
-# Build artifacts
+# Kernel module build artifacts
 *.ko
+*.ko.cmd
 *.mod
 *.mod.c
 *.mod.o
 *.o
-.*.cmd
-Module.symvers
-modules.order
-.tmp_versions/
+*.a
+*.s
+*.so
 
-# MOK signing keys (keep private key secure)
+# Build directories and files
+.tmp_versions/
+*.symvers
+modules.order
+Module.symvers
+Module.symvers.cmd
+
+# Kernel build system
+.*.cmd
+.*.d
+.cache.mk
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.vim
+.DS_Store
+
+# Compilation output
+*.tar.gz
+*.zip
+
+# Debug and test files
+.debug/
+*.log
+core
+core.*
+
+# Dependencies
+dependencies.txt
+
+# MOK signing artifacts (keep keys, ignore temp files)
 mok.key
 *.key
+.mok.tmp
+signing.log
+
+# Temporary files
+*.tmp
+.tmp*
 
 # Binaries
 pcie_test_utility
 
-# Editor/IDE
-.vscode/
-*.swp
-*.swo
-*~
+# ctags/cscope
+tags
+cscope.*
+
+# Generated files from tools
+lex.yy.c
+*.tab.c
+*.tab.h
+
+# Patch files
+*.patch
+*.diff
 
 # OS
-.DS_Store
 Thumbs.db
