@@ -38,7 +38,7 @@
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci.h>
 #include <net/bluetooth/hci_sync.h>
-//#include "../../drivers/bluetooth/btintel_pcie.h"
+
 #include "btintel_test_generic_driver.h"
 
 /* ============================================================================
@@ -388,41 +388,7 @@ static long btintel_test_ioctl(struct file *filp, unsigned int cmd,
  * DEVICE INITIALIZATION & CLEANUP
  * ============================================================================ */
 
-/**
- * btintel_test_device_init - Initialize device structure
- *
- * Return: 0 on success, negative error code on failure
- */
-static int btintel_test_device_init(void)
-{
-	int ret = 0;
 
-	pr_info("Initializing device\n");
-
-	btintel_test_dev = kzalloc(sizeof(*btintel_test_dev), GFP_KERNEL);
-	if (!btintel_test_dev) {
-		pr_err("Failed to allocate device structure\n");
-		return -ENOMEM;
-	}
-
-	btintel_test_dev->active = true;
-	btintel_test_dev->buffer_size = BTINTEL_TEST_DEFAULT_BUFFER_SIZE;
-
-	/* Allocate internal buffer */
-	btintel_test_dev->buffer = kzalloc(btintel_test_dev->buffer_size, GFP_KERNEL);
-	if (!btintel_test_dev->buffer) {
-		pr_err("Failed to allocate device buffer\n");
-		ret = -ENOMEM;
-		goto err_buffer;
-	}
-
-	return 0;
-
-err_buffer:
-	kfree(btintel_test_dev);
-	btintel_test_dev = NULL;
-	return ret;
-}
 
 /**
  * btintel_test_device_cleanup - Cleanup device structure
@@ -447,34 +413,6 @@ static void btintel_test_device_cleanup(void)
  * MISCDEVICE REGISTRATION
  * ============================================================================ */
 
-/**
- * btintel_test_misc_register - Register miscdevice
- *
- * Return: 0 on success, negative error code on failure
- */
-static int btintel_test_misc_register(void)
-{
-	int ret = 0;
-
-	pr_info("Registering miscdevice\n");
-
-	/* Setup miscdevice structure */
-	btintel_test_dev->misc.minor = MISC_DYNAMIC_MINOR;
-	btintel_test_dev->misc.name = DRIVER_NAME;
-	btintel_test_dev->misc.fops = &btintel_test_fops;
-
-	/* Register miscdevice */
-	ret = misc_register(&btintel_test_dev->misc);
-	if (ret) {
-		pr_err("Failed to register miscdevice\n");
-		return ret;
-	}
-
-	pr_info("Miscdevice registered: /dev/%s (minor: %d)\n",
-		DRIVER_NAME, btintel_test_dev->misc.minor);
-
-	return 0;
-}
 
 /**
  * find_intel_bt_devices - Find Intel Bluetooth PCIe device
@@ -551,10 +489,24 @@ static int __init btintel_test_init(void)
 	pr_info("Found Intel Bluetooth PCIe device\n");
 
 	/* Initialize device */
-	ret = btintel_test_device_init();
-	if (ret) {
-		pr_err("Failed to initialize device\n");
-		return ret;
+	pr_info("Initializing device\n");
+
+	btintel_test_dev = kzalloc(sizeof(*btintel_test_dev), GFP_KERNEL);
+	if (!btintel_test_dev) {
+		pr_err("Failed to allocate device structure\n");
+		return -ENOMEM;
+	}
+
+	btintel_test_dev->active = true;
+	btintel_test_dev->buffer_size = BTINTEL_TEST_DEFAULT_BUFFER_SIZE;
+
+	/* Allocate internal buffer */
+	btintel_test_dev->buffer = kzalloc(btintel_test_dev->buffer_size, GFP_KERNEL);
+	if (!btintel_test_dev->buffer) {
+		pr_err("Failed to allocate device buffer\n");
+		kfree(btintel_test_dev);
+		btintel_test_dev = NULL;
+		return -ENOMEM;
 	}
 
 	/* Store PCI device reference */
@@ -563,12 +515,23 @@ static int __init btintel_test_init(void)
 
 	test_function();
 	/* Register miscdevice */
-	ret = btintel_test_misc_register();
+	pr_info("Registering miscdevice\n");
+
+	/* Setup miscdevice structure */
+	btintel_test_dev->misc.minor = MISC_DYNAMIC_MINOR;
+	btintel_test_dev->misc.name = DRIVER_NAME;
+	btintel_test_dev->misc.fops = &btintel_test_fops;
+
+	/* Register miscdevice */
+	ret = misc_register(&btintel_test_dev->misc);
 	if (ret) {
 		pr_err("Failed to register miscdevice\n");
 		btintel_test_device_cleanup();
 		return ret;
 	}
+
+	pr_info("Miscdevice registered: /dev/%s (minor: %d)\n",
+		DRIVER_NAME, btintel_test_dev->misc.minor);
 
 	pr_info("Driver loaded successfully\n");
 	return 0;
