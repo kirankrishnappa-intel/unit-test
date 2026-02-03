@@ -444,7 +444,7 @@ static void btintel_test_device_cleanup(void)
 }
 
 /* ============================================================================
- * CHARACTER DEVICE REGISTRATION
+ * MISCDEVICE REGISTRATION
  * ============================================================================ */
 
 /**
