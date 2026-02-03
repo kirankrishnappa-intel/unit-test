@@ -204,7 +204,6 @@ static ssize_t btintel_test_read(struct file *filp, char __user *buf,
 				  size_t count, loff_t *f_pos)
 {
 	struct btintel_test_device *dev = filp->private_data;
-	ssize_t ret = 0;
 
 	if (!dev || !dev->buffer)
 		return -ENODEV;
